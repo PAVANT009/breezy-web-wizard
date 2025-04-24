@@ -1,9 +1,9 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 type Message = {
   id: string;
@@ -22,6 +22,7 @@ const ChatBot = () => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasCheckedConnection, setHasCheckedConnection] = useState(false);
   const { toast } = useToast();
 
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
@@ -77,10 +78,30 @@ const ChatBot = () => {
       setIsLoading(false);
     }, 1000);
 
-    toast({
-      title: "Note",
-      description: "Connect to Supabase to enable real chatbot functionality",
-    });
+    // Only show this toast once per session and only if not already connected
+    if (!hasCheckedConnection) {
+      const checkConnection = async () => {
+        try {
+          const { error } = await supabase.auth.getSession();
+          if (error) {
+            // Only show if there's an error (not connected)
+            toast({
+              title: "Note",
+              description: "Connect to Supabase to enable real chatbot functionality",
+            });
+          }
+          setHasCheckedConnection(true);
+        } catch (error) {
+          toast({
+            title: "Note",
+            description: "Connect to Supabase to enable real chatbot functionality",
+          });
+          setHasCheckedConnection(true);
+        }
+      };
+      
+      checkConnection();
+    }
   };
 
   return (

@@ -18,13 +18,10 @@ const Layout = ({ children }: LayoutProps) => {
     const checkConnection = async () => {
       try {
         // Try to make a simple query to verify connection
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id')
-          .limit(1);
+        const { error } = await supabase.auth.getSession();
         
         // If there's no error, we're connected
-        if (!error && !hasCheckedConnection) {
+        if (!error) {
           // Connection successful, do nothing
           setHasCheckedConnection(true);
         } else if (!hasCheckedConnection) {
