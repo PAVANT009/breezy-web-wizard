@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -142,7 +143,11 @@ const Feedback = () => {
           </div>
         </div>
 
-        {filteredFeedback.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <h3 className="text-xl font-medium">Loading feedback...</h3>
+          </div>
+        ) : filteredFeedback.length === 0 ? (
           <div className="text-center py-12">
             <h3 className="text-xl font-medium">No feedback found</h3>
             <p className="text-muted-foreground mt-2">
@@ -158,7 +163,7 @@ const Feedback = () => {
                     <div>
                       <CardTitle>{item.title}</CardTitle>
                       <CardDescription>
-                        Submitted on {formatDate(item.createdAt)}
+                        Submitted on {formatDate(item.created_at)}
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">

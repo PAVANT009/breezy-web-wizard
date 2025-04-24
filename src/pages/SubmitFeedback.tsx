@@ -1,3 +1,4 @@
+
 import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -57,12 +58,20 @@ const SubmitFeedback = () => {
       title: "",
       description: "",
       email: "",
+      category: "",
+      priority: "",
     },
   });
 
   const onSubmit = async (data: FormValues) => {
     try {
-      await submitFeedback(data);
+      await submitFeedback({
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        priority: data.priority,
+        email: data.email
+      });
       toast.success("Feedback submitted successfully!");
       navigate("/feedback");
     } catch (error) {

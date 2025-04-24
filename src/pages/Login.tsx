@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -122,8 +123,8 @@ const Login = () => {
                   )}
                 />
 
-                <Button type="submit" className="w-full">
-                  {mode === "login" ? "Sign In" : "Sign Up"}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Processing..." : mode === "login" ? "Sign In" : "Sign Up"}
                 </Button>
               </form>
             </Form>
