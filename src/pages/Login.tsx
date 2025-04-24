@@ -1,11 +1,10 @@
-
 import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
-
+import { useNavigate } from "react-router-dom";
+import { signInWithEmail, signUpWithEmail } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,6 +38,10 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const Login = () => {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -47,13 +50,22 @@ const Login = () => {
     },
   });
 
-  const onSubmit = (data: FormValues) => {
-    console.log("Login attempt:", data);
-    
-    toast.info("Authentication requires Supabase connection", {
-      description: "Please connect this project to Supabase to enable login functionality.",
-      duration: 5000,
-    });
+  const onSubmit = async (data: FormValues) => {
+    setIsLoading(true);
+    try {
+      if (mode === "login") {
+        await signInWithEmail(data.email, data.password);
+        toast.success("Successfully logged in!");
+      } else {
+        await signUpWithEmail(data.email, data.password);
+        toast.success("Account created successfully!");
+      }
+      navigate("/");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -61,9 +73,14 @@ const Login = () => {
       <div className="flex items-center justify-center min-h-[70vh] animate-fade-in">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Login</CardTitle>
+            <CardTitle className="text-2xl text-center">
+              {mode === "login" ? "Login" : "Create Account"}
+            </CardTitle>
             <CardDescription className="text-center">
-              Enter your credentials to access your account
+              {mode === "login" 
+                ? "Enter your credentials to access your account"
+                : "Sign up for an account to get started"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -106,7 +123,7 @@ const Login = () => {
                 />
 
                 <Button type="submit" className="w-full">
-                  Sign In
+                  {mode === "login" ? "Sign In" : "Sign Up"}
                 </Button>
               </form>
             </Form>
@@ -159,10 +176,29 @@ const Login = () => {
           </CardContent>
           <CardFooter className="flex flex-col justify-center">
             <div className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/register" className="underline text-primary">
-                Sign up
-              </Link>
+              {mode === "login" ? (
+                <>
+                  Don't have an account?{" "}
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto"
+                    onClick={() => setMode("signup")}
+                  >
+                    Sign up
+                  </Button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto"
+                    onClick={() => setMode("login")}
+                  >
+                    Log in
+                  </Button>
+                </>
+              )}
             </div>
           </CardFooter>
         </Card>

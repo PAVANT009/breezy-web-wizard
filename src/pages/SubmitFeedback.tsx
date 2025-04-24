@@ -1,10 +1,11 @@
-
 import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { submitFeedback } from "@/lib/feedback";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const SubmitFeedback = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -58,19 +60,14 @@ const SubmitFeedback = () => {
     },
   });
 
-  const onSubmit = (data: FormValues) => {
-    console.log("Form data:", data);
-    
-    // Since we don't have Supabase connected yet, we'll simulate a submission
-    toast.success("Feedback submitted successfully!", {
-      description: "Connect to Supabase to enable persistent storage.",
-    });
-    
-    // Reset the form
-    form.reset();
-    
-    // Navigate to feedback page after submission
-    navigate("/feedback");
+  const onSubmit = async (data: FormValues) => {
+    try {
+      await submitFeedback(data);
+      toast.success("Feedback submitted successfully!");
+      navigate("/feedback");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to submit feedback");
+    }
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,84 +18,28 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import Layout from "@/components/layout/Layout";
-
-// Mock data
-const mockFeedbackItems = [
-  {
-    id: "1",
-    title: "Login page needs improvement",
-    description:
-      "The login page is difficult to use on mobile devices. The input fields are too small and the login button is hard to tap.",
-    category: "improvement",
-    priority: "medium",
-    email: "user1@example.com",
-    createdAt: "2023-05-15T10:30:00Z",
-    status: "open",
-  },
-  {
-    id: "2",
-    title: "Add dark mode support",
-    description:
-      "It would be great if the application had a dark mode option to reduce eye strain when using it at night.",
-    category: "feature",
-    priority: "low",
-    email: "user2@example.com",
-    createdAt: "2023-05-16T14:20:00Z",
-    status: "in-progress",
-  },
-  {
-    id: "3",
-    title: "Dashboard not loading correctly",
-    description:
-      "The dashboard sometimes fails to load data and shows a blank screen. This happens approximately 10% of the time.",
-    category: "bug",
-    priority: "high",
-    email: "user3@example.com",
-    createdAt: "2023-05-17T09:45:00Z",
-    status: "open",
-  },
-  {
-    id: "4",
-    title: "Better notification system needed",
-    description:
-      "Would love to see more customizable notifications so I can filter what I receive. Currently getting too many notifications.",
-    category: "improvement",
-    priority: "medium",
-    email: "user4@example.com",
-    createdAt: "2023-05-18T16:10:00Z",
-    status: "open",
-  },
-  {
-    id: "5",
-    title: "Export data to CSV",
-    description:
-      "It would be helpful to have a feature to export data to CSV format for further analysis in spreadsheet applications.",
-    category: "feature",
-    priority: "medium",
-    email: "user5@example.com",
-    createdAt: "2023-05-19T11:25:00Z",
-    status: "under-review",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { getFeedback } from "@/lib/feedback";
 
 const Feedback = () => {
+  const { data: feedbackItems, isLoading } = useQuery({
+    queryKey: ["feedback"],
+    queryFn: getFeedback
+  });
+
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Filter feedback items
-  const filteredFeedback = mockFeedbackItems.filter((item) => {
-    // Apply category filter
+  const filteredFeedback = (feedbackItems || []).filter((item) => {
     if (categoryFilter !== "all" && item.category !== categoryFilter) {
       return false;
     }
 
-    // Apply priority filter
     if (priorityFilter !== "all" && item.priority !== priorityFilter) {
       return false;
     }
 
-    // Apply search filter
     if (
       searchTerm &&
       !item.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -108,7 +51,6 @@ const Feedback = () => {
     return true;
   });
 
-  // Helper function to get category badge color
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "bug":
@@ -122,7 +64,6 @@ const Feedback = () => {
     }
   };
 
-  // Helper function to get priority badge color
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "low":
@@ -138,7 +79,6 @@ const Feedback = () => {
     }
   };
 
-  // Helper function to format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
