@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmail, signUpWithEmail, resendVerificationEmail } from "@/lib/auth";
+import { signInWithEmail, signUpWithEmail } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,8 +26,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import Layout from "@/components/layout/Layout";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -44,9 +42,6 @@ const Login = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
-  const [needsVerification, setNeedsVerification] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState("");
-  const [resendingEmail, setResendingEmail] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -56,48 +51,33 @@ const Login = () => {
     },
   });
 
-  const handleResendVerification = async () => {
-    if (!verificationEmail) return;
-    
-    setResendingEmail(true);
-    try {
-      await resendVerificationEmail(verificationEmail);
-      toast.success("Verification email resent. Please check your inbox.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to resend verification email");
-    } finally {
-      setResendingEmail(false);
-    }
-  };
-
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
       if (mode === "login") {
         await signInWithEmail(data.email, data.password);
         toast.success("Successfully logged in!");
+        navigate("/");
       } else {
-        await signUpWithEmail(data.email, data.password);
-        toast.success("Account created successfully!");
-        setNeedsVerification(true);
-        setVerificationEmail(data.email);
-        setMode("login");
-        return; // Don't navigate away - user needs to verify email
+        const result = await signUpWithEmail(data.email, data.password);
+        
+        // If we have a session, the user was automatically signed in
+        if (result.session) {
+          toast.success("Account created and logged in successfully!");
+          navigate("/");
+        } else {
+          // No session means they need to verify their email
+          toast.success("Account created! Please check your email to verify your account.");
+          setMode("login");
+        }
       }
-      navigate("/");
     } catch (error) {
       console.error("Authentication error:", error);
-      const errorMessage = error instanceof Error ? error.message : "An error occurred";
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Authentication failed. Please try again.";
       
-      // Check for verification error message
-      if (error instanceof Error && 
-          error.message.includes("verify your email")) {
-        setNeedsVerification(true);
-        setVerificationEmail(data.email);
-        toast.error("Email verification required");
-      } else {
-        toast.error(errorMessage);
-      }
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -119,23 +99,6 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {needsVerification && (
-              <Alert variant="default" className="mb-6 bg-amber-50 text-amber-800 border-amber-300">
-                <InfoIcon className="h-4 w-4 mr-2" />
-                <AlertDescription>
-                  Please check your email for a verification link before signing in.
-                  <Button 
-                    variant="link" 
-                    className="text-amber-800 p-0 h-auto ml-2" 
-                    onClick={handleResendVerification}
-                    disabled={resendingEmail}
-                  >
-                    {resendingEmail ? "Sending..." : "Resend verification email"}
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
