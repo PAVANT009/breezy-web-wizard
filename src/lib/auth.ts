@@ -10,6 +10,12 @@ export async function signInWithEmail(email: string, password: string) {
   
   if (error) {
     console.error("Login error:", error);
+    
+    // Check specifically for email not confirmed error
+    if (error.message === "Email not confirmed") {
+      throw new Error("Please verify your email before signing in. Check your inbox for a confirmation link.");
+    }
+    
     throw error;
   }
   
@@ -37,4 +43,18 @@ export async function signUpWithEmail(email: string, password: string) {
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
+}
+
+export async function resendVerificationEmail(email: string) {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email,
+  });
+  
+  if (error) {
+    console.error("Error sending verification email:", error);
+    throw error;
+  }
+  
+  return { success: true };
 }
