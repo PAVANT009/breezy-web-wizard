@@ -2,8 +2,22 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { signOut } from "@/lib/auth";
+import { toast } from "sonner";
 
 const Navbar = () => {
+  const { user } = useAuth();
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Successfully logged out");
+    } catch (error) {
+      toast.error("Failed to log out");
+    }
+  };
+  
   return (
     <nav className="border-b">
       <div className="container mx-auto flex h-16 items-center justify-between">
@@ -30,9 +44,15 @@ const Navbar = () => {
           <Link to="/submit-feedback">
             <Button>Submit Feedback</Button>
           </Link>
-          <Link to="/login">
-            <Button variant="outline">Login</Button>
-          </Link>
+          {user ? (
+            <Button variant="outline" onClick={handleSignOut}>
+              Sign Out
+            </Button>
+          ) : (
+            <Link to="/login">
+              <Button variant="outline">Login</Button>
+            </Link>
+          )}
         </div>
       </div>
     </nav>
