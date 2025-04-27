@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -22,12 +23,10 @@ export async function submitFeedback(feedback: {
 }
 
 export async function getFeedback() {
+  // Remove the join with profiles that's causing the error
   const { data, error } = await supabase
     .from("feedback")
-    .select(`
-      *,
-      profiles:profiles(username, full_name)
-    `)
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (error) {
