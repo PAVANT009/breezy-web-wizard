@@ -1,9 +1,13 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { getFeedback } from "@/lib/feedback";
+import { MessageCircle } from "lucide-react";
 
 type Message = {
   id: string;
@@ -23,15 +27,34 @@ const ChatBot = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasCheckedConnection, setHasCheckedConnection] = useState(false);
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const [feedbackData, setFeedbackData] = useState<any[]>([]);
+  const [feedbackLoaded, setFeedbackLoaded] = useState(false);
 
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Load feedback data when the component mounts or user changes
+  useEffect(() => {
+    if (user && isOpen && !feedbackLoaded) {
+      const loadFeedback = async () => {
+        try {
+          const data = await getFeedback();
+          setFeedbackData(data);
+          setFeedbackLoaded(true);
+        } catch (error) {
+          console.error("Error loading feedback data:", error);
+        }
+      };
+      
+      loadFeedback();
+    }
+  }, [user, isOpen, feedbackLoaded]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,26 +70,70 @@ const ChatBot = () => {
     setMessage("");
     setIsLoading(true);
 
-    // Simulate API call for chatbot response
-    setTimeout(() => {
-      // Hard-coded responses based on user input
-      let botResponse = "";
-      const lowerCaseMessage = message.toLowerCase();
+    // Process the user's message and generate a response
+    const lowerCaseMessage = message.toLowerCase();
+    let botResponse = "";
 
-      if (lowerCaseMessage.includes("hello") || lowerCaseMessage.includes("hi")) {
-        botResponse = "Hello! How can I assist you with community feedback today?";
-      } else if (lowerCaseMessage.includes("feedback") && lowerCaseMessage.includes("submit")) {
-        botResponse = "To submit feedback, click the 'Submit Feedback' button in the navigation bar or visit the /submit-feedback page.";
-      } else if (lowerCaseMessage.includes("category") || lowerCaseMessage.includes("categories")) {
-        botResponse = "We have several feedback categories: Bug Report, Feature Request, Improvement, and General Feedback.";
-      } else if (lowerCaseMessage.includes("login") || lowerCaseMessage.includes("sign")) {
-        botResponse = "To login, click the 'Login' button in the navigation bar. Note that you'll need to connect this project to Supabase for authentication to work.";
-      } else if (lowerCaseMessage.includes("thank")) {
-        botResponse = "You're welcome! Let me know if you need anything else.";
-      } else {
-        botResponse = "I don't have specific information about that. Once this project is connected to Supabase, I'll be able to provide more helpful responses.";
+    // Check if Supabase is connected
+    if (!hasCheckedConnection) {
+      try {
+        const { error } = await supabase.auth.getSession();
+        setHasCheckedConnection(true);
+        if (error) {
+          botResponse = "I notice that you're not connected to Supabase. Some features may be limited until you connect.";
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: (Date.now() + 1).toString(),
+              text: botResponse,
+              sender: "bot",
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking Supabase connection:", error);
       }
+    }
 
+    // Generate response based on user message
+    if (lowerCaseMessage.includes("hello") || lowerCaseMessage.includes("hi")) {
+      botResponse = "Hello! How can I assist you with community feedback today?";
+    } 
+    else if (lowerCaseMessage.includes("feedback") && lowerCaseMessage.includes("submit")) {
+      botResponse = "To submit feedback, click the 'Submit Feedback' button in the navigation bar or visit the feedback submission page.";
+    } 
+    else if (lowerCaseMessage.includes("category") || lowerCaseMessage.includes("categories")) {
+      botResponse = "We have several feedback categories: Bug Report, Feature Request, Improvement, and General Feedback.";
+    } 
+    else if (lowerCaseMessage.includes("priority") || lowerCaseMessage.includes("priorities")) {
+      botResponse = "Feedback can be categorized by priority: Low, Medium, High, and Critical. This helps our team prioritize issues.";
+    }
+    else if (lowerCaseMessage.includes("popular") || lowerCaseMessage.includes("trending")) {
+      // Check if we have feedback data to share
+      if (feedbackData && feedbackData.length > 0) {
+        const recentFeedback = feedbackData.slice(0, 3);
+        botResponse = "Here are some recent feedback submissions:\n\n" + 
+          recentFeedback.map(item => `• ${item.title} (${item.category})`).join("\n");
+      } else {
+        botResponse = "I don't have any feedback data to show at the moment. Check back after some submissions have been made.";
+      }
+    }
+    else if (lowerCaseMessage.includes("login") || lowerCaseMessage.includes("sign")) {
+      botResponse = "To login, click the 'Login' button in the navigation bar. You'll need to have an account to submit and track feedback.";
+    }
+    else if (lowerCaseMessage.includes("thank")) {
+      botResponse = "You're welcome! Let me know if you need anything else.";
+    }
+    else if (lowerCaseMessage.includes("help")) {
+      botResponse = "I can help with: \n• Information about submitting feedback\n• Explanation of categories and priorities\n• Overview of recent feedback\n• Login assistance\n\nJust ask me about any of these topics!";
+    }
+    else {
+      botResponse = "I'm not sure I understand. You can ask me about submitting feedback, feedback categories, priorities, or popular feedback items. Type 'help' for more options.";
+    }
+
+    setTimeout(() => {
       setMessages((prev) => [
         ...prev,
         {
@@ -76,32 +143,7 @@ const ChatBot = () => {
         },
       ]);
       setIsLoading(false);
-    }, 1000);
-
-    // Only show this toast once per session and only if not already connected
-    if (!hasCheckedConnection) {
-      const checkConnection = async () => {
-        try {
-          const { error } = await supabase.auth.getSession();
-          if (error) {
-            // Only show if there's an error (not connected)
-            toast({
-              title: "Note",
-              description: "Connect to Supabase to enable real chatbot functionality",
-            });
-          }
-          setHasCheckedConnection(true);
-        } catch (error) {
-          toast({
-            title: "Note",
-            description: "Connect to Supabase to enable real chatbot functionality",
-          });
-          setHasCheckedConnection(true);
-        }
-      };
-      
-      checkConnection();
-    }
+    }, 800);
   };
 
   return (
@@ -127,19 +169,7 @@ const ChatBot = () => {
             <path d="m6 6 12 12" />
           </svg>
         ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-6 w-6"
-          >
-            <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z" />
-            <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
-          </svg>
+          <MessageCircle className="h-6 w-6" />
         )}
       </Button>
 
