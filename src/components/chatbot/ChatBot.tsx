@@ -1,18 +1,16 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getFeedback } from "@/lib/feedback";
 import { MessageCircle } from "lucide-react";
-
-type Message = {
-  id: string;
-  text: string;
-  sender: "user" | "bot";
-};
+import ChatMessage from "./ChatMessage";
+import LoadingIndicator from "./LoadingIndicator";
+import ChatInput from "./ChatInput";
+import { Message } from "./types";
 
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -155,68 +153,18 @@ const ChatBot = () => {
         <ScrollArea className="h-80 p-4" ref={scrollAreaRef}>
           <div className="flex flex-col gap-3">
             {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${
-                  msg.sender === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`rounded-lg px-3 py-2 max-w-[80%] ${
-                    msg.sender === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary/10 text-foreground"
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              </div>
+              <ChatMessage key={msg.id} message={msg} />
             ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-secondary/10 rounded-lg px-3 py-2">
-                  <span className="flex gap-1">
-                    <span className="animate-bounce">.</span>
-                    <span className="animate-bounce" style={{ animationDelay: "0.2s" }}>.</span>
-                    <span className="animate-bounce" style={{ animationDelay: "0.4s" }}>.</span>
-                  </span>
-                </div>
-              </div>
-            )}
+            {isLoading && <LoadingIndicator />}
           </div>
         </ScrollArea>
 
-        <form
+        <ChatInput
+          message={message}
+          setMessage={setMessage}
           onSubmit={handleSendMessage}
-          className="border-t p-4 flex gap-2"
-        >
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type a message..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={isLoading || !message.trim()}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-            >
-              <path d="m22 2-7 20-4-9-9-4Z" />
-              <path d="M22 2 11 13" />
-            </svg>
-          </Button>
-        </form>
+          isLoading={isLoading}
+        />
       </div>
     </>
   );
