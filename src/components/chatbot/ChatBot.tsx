@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +38,6 @@ const ChatBot = () => {
     }
   }, [messages]);
 
-  // Load feedback data when the component mounts or user changes
   useEffect(() => {
     if (user && isOpen && !feedbackLoaded) {
       const loadFeedback = async () => {
@@ -70,85 +68,38 @@ const ChatBot = () => {
     setMessage("");
     setIsLoading(true);
 
-    // Process the user's message and generate a response
-    const lowerCaseMessage = message.toLowerCase();
-    let botResponse = "";
+    try {
+      const { data, error } = await supabase.functions.invoke('gemini-chat', {
+        body: { message },
+      });
 
-    // Check if Supabase is connected
-    if (!hasCheckedConnection) {
-      try {
-        const { error } = await supabase.auth.getSession();
-        setHasCheckedConnection(true);
-        if (error) {
-          botResponse = "I notice that you're not connected to Supabase. Some features may be limited until you connect.";
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: (Date.now() + 1).toString(),
-              text: botResponse,
-              sender: "bot",
-            },
-          ]);
-          setIsLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.error("Error checking Supabase connection:", error);
-      }
-    }
+      if (error) throw error;
 
-    // Generate response based on user message
-    if (lowerCaseMessage.includes("hello") || lowerCaseMessage.includes("hi")) {
-      botResponse = "Hello! How can I assist you with community feedback today?";
-    } 
-    else if (lowerCaseMessage.includes("feedback") && lowerCaseMessage.includes("submit")) {
-      botResponse = "To submit feedback, click the 'Submit Feedback' button in the navigation bar or visit the feedback submission page.";
-    } 
-    else if (lowerCaseMessage.includes("category") || lowerCaseMessage.includes("categories")) {
-      botResponse = "We have several feedback categories: Bug Report, Feature Request, Improvement, and General Feedback.";
-    } 
-    else if (lowerCaseMessage.includes("priority") || lowerCaseMessage.includes("priorities")) {
-      botResponse = "Feedback can be categorized by priority: Low, Medium, High, and Critical. This helps our team prioritize issues.";
-    }
-    else if (lowerCaseMessage.includes("popular") || lowerCaseMessage.includes("trending")) {
-      // Check if we have feedback data to share
-      if (feedbackData && feedbackData.length > 0) {
-        const recentFeedback = feedbackData.slice(0, 3);
-        botResponse = "Here are some recent feedback submissions:\n\n" + 
-          recentFeedback.map(item => `• ${item.title} (${item.category})`).join("\n");
-      } else {
-        botResponse = "I don't have any feedback data to show at the moment. Check back after some submissions have been made.";
-      }
-    }
-    else if (lowerCaseMessage.includes("login") || lowerCaseMessage.includes("sign")) {
-      botResponse = "To login, click the 'Login' button in the navigation bar. You'll need to have an account to submit and track feedback.";
-    }
-    else if (lowerCaseMessage.includes("thank")) {
-      botResponse = "You're welcome! Let me know if you need anything else.";
-    }
-    else if (lowerCaseMessage.includes("help")) {
-      botResponse = "I can help with: \n• Information about submitting feedback\n• Explanation of categories and priorities\n• Overview of recent feedback\n• Login assistance\n\nJust ask me about any of these topics!";
-    }
-    else {
-      botResponse = "I'm not sure I understand. You can ask me about submitting feedback, feedback categories, priorities, or popular feedback items. Type 'help' for more options.";
-    }
+      const botResponse = {
+        id: (Date.now() + 1).toString(),
+        text: data.text,
+        sender: "bot" as const,
+      };
 
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          text: botResponse,
-          sender: "bot",
-        },
-      ]);
+      setMessages((prev) => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Error calling Gemini:', error);
+      toast.error('Failed to get AI response. Please try again.');
+      
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        text: "I'm sorry, I encountered an error. Please try again.",
+        sender: "bot" as const,
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
     <>
-      {/* Chat Button */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-4 right-4 rounded-full h-12 w-12 p-0 shadow-lg bg-primary hover:bg-primary/90"
@@ -173,7 +124,6 @@ const ChatBot = () => {
         )}
       </Button>
 
-      {/* Chat Window */}
       <div
         className={`fixed bottom-20 right-4 w-80 sm:w-96 bg-card shadow-xl rounded-lg overflow-hidden border transition-all duration-300 ease-in-out ${
           isOpen ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
